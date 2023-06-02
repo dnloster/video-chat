@@ -5,6 +5,7 @@ const roomInput = document.getElementById("room-input");
 const connectButton = document.getElementById("connect-button");
 // const nameDisplayed = document.getElementById("display-name");
 // const localChat = document.getElementById("local");
+const disconnectButton = document.getElementById("disconnect-button");
 
 const videoChatContainer = document.getElementById("video-chat-container");
 const localVideoComponent = document.getElementById("local-video");
@@ -264,10 +265,57 @@ function sendIceCandidate(event, remotePeerId) {
     }
 }
 
+function toast({ title = "", type = "info", duration = 3000 }) {
+    const main = document.getElementById("toast");
+    if (main) {
+        const toast = document.createElement("div");
+
+        // Auto remove toast
+        const autoRemoveId = setTimeout(function () {
+            main.removeChild(toast);
+        }, duration + 1000);
+
+        // Remove toast when clicked
+        toast.onclick = function (e) {
+            if (e.target.closest(".toast__close")) {
+                main.removeChild(toast);
+                clearTimeout(autoRemoveId);
+            }
+        };
+
+        const delay = (duration / 1000).toFixed(2);
+
+        toast.classList.add("toast", `toast--${type}`);
+        toast.style.animation = `slideInLeft ease .3s, fadeOut linear 1s ${delay}s forwards`;
+
+        toast.innerHTML = `
+                    <div class="toast__icon">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </div>
+                    <div class="toast__body">
+                        <h3 class="toast__title">${title}</h3>
+                    </div>
+                    <div class="toast__close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </div>
+                `;
+        main.appendChild(toast);
+    }
+}
+
+function showErrorToast() {
+    toast({
+        title: `Người dùng đã ngắt kết nối`,
+        type: "info",
+        duration: 5000,
+    });
+}
+
 function checkPeerDisconnect(event, remotePeerId) {
     var state = peerConnections[remotePeerId].iceConnectionState;
     console.log(`connection with peer ${remotePeerId}: ${state}`);
     if (state === "failed" || state === "closed" || state === "disconnected") {
+        showErrorToast();
         console.log(`Peer ${remotePeerId} has disconnected`);
         const videoDisconnected = document.getElementById(
             "remotevideo_" + remotePeerId
