@@ -125,7 +125,6 @@ input[type="number"]::-webkit-outer-spin-button {
 #video-chat-container {
     max-width: 70%;
     margin: 0 auto;
-    height: 100vh;
     overflow: hidden;
     background-color: white;
     padding: 10px;

@@ -6,6 +6,8 @@ const io = require("socket.io")(server);
 
 app.use("/", express.static(path.join(__dirname, "public")));
 
+// const Users = [];
+
 io.on("connection", (socket) => {
     console.log(`User connected`);
     socket.on("join", (payload) => {
@@ -83,7 +85,7 @@ io.on("connection", (socket) => {
 });
 
 // START THE SERVER =================================================================
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 4444;
 server.listen(port, () => {
     console.log(`Express server listening on port ${port}`);
 });

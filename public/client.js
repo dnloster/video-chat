@@ -28,20 +28,20 @@ let localPeerId;
 let localStream;
 let rtcPeerConnection; // Connection between the local device and the remote peer.
 let roomId;
-// let displayName;
+// let userName;
 
 // connect to stun server
-const iceServers = {
-    iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-        {
-            urls: "turn:a.relay.metered.ca:443",
-            username: "6b41afadc9eda2a87e649b7a",
-            credential: "sRqbPILONoHRg0Vz",
-        },
-    ],
-};
+// const iceServers = {
+//     iceServers: [
+//         { urls: "stun:stun.l.google.com:19302" },
+//         { urls: "stun:stun1.l.google.com:19302" },
+//         {
+//             urls: "turn:a.relay.metered.ca:443",
+//             username: "6b41afadc9eda2a87e649b7a",
+//             credential: "sRqbPILONoHRg0Vz",
+//         },
+//     ],
+// };
 
 // BUTTON LISTENER ============================================================
 connectButton.addEventListener("click", () => {
@@ -83,7 +83,7 @@ socket.on("start_call", async (event) => {
         `Socket event callback: start_call. RECEIVED from ${remotePeerId}`
     );
 
-    peerConnections[remotePeerId] = new RTCPeerConnection(iceServers);
+    peerConnections[remotePeerId] = new RTCPeerConnection();
     addLocalTracks(peerConnections[remotePeerId]);
     peerConnections[remotePeerId].ontrack = (event) =>
         setRemoteStream(event, remotePeerId);
@@ -100,10 +100,8 @@ socket.on("webrtc_offer", async (event) => {
     );
     const remotePeerId = event.senderId;
 
-    peerConnections[remotePeerId] = new RTCPeerConnection(iceServers);
-    disconnectButton.addEventListener("click", () => {
-        peerConnections.close();
-    });
+    peerConnections[remotePeerId] = new RTCPeerConnection();
+
     console.log(new RTCSessionDescription(event.sdp));
     peerConnections[remotePeerId].setRemoteDescription(
         new RTCSessionDescription(event.sdp)
@@ -158,11 +156,11 @@ function joinRoom(room) {
         alert("Please type a room ID");
     } else {
         roomId = room;
-        // displayName = displayName;
+        // userName = userName;
         socket.emit("join", {
             room: room,
             peerUUID: localPeerId,
-            // displayName: displayName,
+            // userName: userName,
         });
         showVideoConference();
     }
@@ -192,15 +190,13 @@ async function setLocalStream(mediaConstraints) {
     localVideoComponent.srcObject = stream;
     localVideoComponent.style = "box-shadow: rgb(4 4 4 / 94%) 0px 7px 29px 0px";
 
-    // Bật hoặc tắt hình ảnh
     function toggleVideo() {
         const videoTracks = stream.getVideoTracks();
         videoTracks.forEach((track) => {
-            track.enabled = !track.enabled; // Đảo ngược trạng thái bật/tắt
+            track.enabled = !track.enabled;
         });
     }
 
-    // Bật tắt âm thanh
     function toggleAudio() {
         const audioTracks = stream.getAudioTracks();
         audioTracks.forEach((track) => {
@@ -208,7 +204,6 @@ async function setLocalStream(mediaConstraints) {
         });
     }
 
-    // Hiển thị trạng thái hình ảnh trong giao diện người dùng
     function updateVideoStatus() {
         const videoTracks = stream.getVideoTracks();
         if (videoTracks.every((track) => !track.enabled)) {
@@ -231,11 +226,9 @@ async function setLocalStream(mediaConstraints) {
         }
     }
 
-    // Hiển thị trạng thái hình ảnh trong giao diện người dùng
     function updateAudioStatus() {
         const audioTracks = stream.getAudioTracks();
         if (audioTracks.every((track) => !track.enabled)) {
-            // videoStatus.textContent = "Hình ảnh đã tắt";
             document.getElementById(
                 "toggle-audio-button"
             ).innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-microphone-off" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -259,14 +252,12 @@ async function setLocalStream(mediaConstraints) {
         }
     }
 
-    // Khi người dùng nhấp vào nút/tắt hình ảnh
     const toggleVideoButton = document.getElementById("toggle-video-button");
     toggleVideoButton.addEventListener("click", () => {
         toggleVideo();
         updateVideoStatus();
     });
 
-    // Khi người dùng nhấp vào nút/tắt âm thanh
     const toggleAudioButton = document.getElementById("toggle-audio-button");
     toggleAudioButton.addEventListener("click", () => {
         toggleAudio();
