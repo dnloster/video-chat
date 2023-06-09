@@ -3,12 +3,11 @@ const roomSelectionContainer = document.getElementById(
 );
 const roomInput = document.getElementById("room-input");
 const connectButton = document.getElementById("connect-button");
-// const nameDisplayed = document.getElementById("display-name");
-// const localChat = document.getElementById("local");
 const disconnectButton = document.getElementById("disconnect-button");
 
 const videoChatContainer = document.getElementById("video-chat-container");
-const localVideoComponent = document.getElementById("local-video");
+const localVideo = document.getElementById("local-video");
+const localVideoComponent = document.getElementById("local");
 const guestComponent = document.getElementById("guest");
 
 // Variables.
@@ -26,59 +25,47 @@ var peerConnections = {};
 
 let localPeerId;
 let localStream;
-let rtcPeerConnection; // Connection between the local device and the remote peer.
+let rtcPeerConnection;
 let roomId;
-// let userName;
-
-// connect to stun server
-// const iceServers = {
-//     iceServers: [
-//         { urls: "stun:stun.l.google.com:19302" },
-//         { urls: "stun:stun1.l.google.com:19302" },
-//         {
-//             urls: "turn:a.relay.metered.ca:443",
-//             username: "6b41afadc9eda2a87e649b7a",
-//             credential: "sRqbPILONoHRg0Vz",
-//         },
-//     ],
-// };
+let userName;
 
 // BUTTON LISTENER ============================================================
 connectButton.addEventListener("click", () => {
-    joinRoom(roomInput.value);
+    joinRoom(roomInput.value, document.getElementById("userName").value);
 });
 
 // SOCKET EVENT CALLBACKS =====================================================
-
 socket.on("room_created", async (event) => {
     localPeerId = event.peerId;
+    userName = event.userName;
     console.log(`Current peer ID: ${localPeerId}`);
     console.log(
         `Socket event callback: room_created with by peer ${localPeerId}, created room ${event.roomId}`
     );
-    // displayName = event.displayName;
 
-    await setLocalStream(mediaConstraints);
+    await setLocalStream(mediaConstraints, userName);
 });
 
 socket.on("room_joined", async (event) => {
     localPeerId = event.peerId;
+    userName = event.userName;
     console.log(`Current peer ID: ${localPeerId}`);
     console.log(
         `Socket event callback: room_joined by peer ${localPeerId}, joined room ${event.roomId}`
     );
 
-    await setLocalStream(mediaConstraints);
+    await setLocalStream(mediaConstraints, userName);
     console.log(`Emit start_call from peer ${localPeerId}`);
     socket.emit("start_call", {
         roomId: event.roomId,
         senderId: localPeerId,
-        // name: displayName,
+        userName: userName,
     });
 });
 
 socket.on("start_call", async (event) => {
     const remotePeerId = event.senderId;
+    const displayName = event.userName;
     console.log(
         `Socket event callback: start_call. RECEIVED from ${remotePeerId}`
     );
@@ -86,18 +73,17 @@ socket.on("start_call", async (event) => {
     peerConnections[remotePeerId] = new RTCPeerConnection();
     addLocalTracks(peerConnections[remotePeerId]);
     peerConnections[remotePeerId].ontrack = (event) =>
-        setRemoteStream(event, remotePeerId);
+        setRemoteStream(event, remotePeerId, displayName);
     peerConnections[remotePeerId].oniceconnectionstatechange = (event) =>
-        checkPeerDisconnect(event, remotePeerId);
+        checkPeerDisconnect(event, remotePeerId, displayName);
     peerConnections[remotePeerId].onicecandidate = (event) =>
         sendIceCandidate(event, remotePeerId);
     await createOffer(peerConnections[remotePeerId], remotePeerId);
 });
 
 socket.on("webrtc_offer", async (event) => {
-    console.log(
-        `Socket event callback: webrtc_offer. RECEIVED from ${event.senderId}`
-    );
+    const displayName = event.userName;
+    console.log(`Socket event callback: webrtc_offer.  from ${event.senderId}`);
     const remotePeerId = event.senderId;
 
     peerConnections[remotePeerId] = new RTCPeerConnection();
@@ -112,9 +98,9 @@ socket.on("webrtc_offer", async (event) => {
     addLocalTracks(peerConnections[remotePeerId]);
 
     peerConnections[remotePeerId].ontrack = (event) =>
-        setRemoteStream(event, remotePeerId);
+        setRemoteStream(event, remotePeerId, displayName);
     peerConnections[remotePeerId].oniceconnectionstatechange = (event) =>
-        checkPeerDisconnect(event, remotePeerId);
+        checkPeerDisconnect(event, remotePeerId, displayName);
     peerConnections[remotePeerId].onicecandidate = (event) =>
         sendIceCandidate(event, remotePeerId);
     await createAnswer(peerConnections[remotePeerId], remotePeerId);
@@ -151,16 +137,16 @@ socket.on("webrtc_ice_candidate", (event) => {
 
 // FUNCTIONS ==================================================================
 
-function joinRoom(room) {
-    if (room === "") {
+function joinRoom(room, userName) {
+    if (room === "" || userName === "") {
         alert("Please type a room ID");
     } else {
         roomId = room;
-        // userName = userName;
+        userName = userName;
         socket.emit("join", {
             room: room,
             peerUUID: localPeerId,
-            // userName: userName,
+            userName: userName,
         });
         showVideoConference();
     }
@@ -168,16 +154,15 @@ function joinRoom(room) {
 
 function showVideoConference() {
     roomSelectionContainer.style = "display: none";
-    document.getElementsByTagName("BODY")[0].style = "background-color: #eee";
+    disconnectButton.style.display = "block";
+    document.getElementsByTagName("BODY")[0].style =
+        "background-color: #eee; display: block; height: unset";
     videoChatContainer.style = "display: block";
     document.getElementById("controls-container").style =
         "display: flex; gap: 30px; position: absolute; bottom: 0; left: 50%; margin-bottom: 20px; transform: translateX(-50%)";
-    // const localName = document.createElement("label");
-    // localName.innerText = displayName;
-    // localChat.appendChild(localName);
 }
 
-async function setLocalStream(mediaConstraints) {
+async function setLocalStream(mediaConstraints, userName) {
     console.log("Local stream set");
     let stream;
     try {
@@ -187,8 +172,11 @@ async function setLocalStream(mediaConstraints) {
     }
 
     localStream = stream;
-    localVideoComponent.srcObject = stream;
-    localVideoComponent.style = "box-shadow: rgb(4 4 4 / 94%) 0px 7px 29px 0px";
+    localVideo.srcObject = stream;
+    localVideo.style = "box-shadow: rgb(4 4 4 / 94%) 0px 7px 29px 0px";
+    var label = document.createElement("label");
+    label.innerHTML = userName;
+    localVideoComponent.append(label);
 
     function toggleVideo() {
         const videoTracks = stream.getVideoTracks();
@@ -314,15 +302,24 @@ async function createAnswer(rtcPeerConnection, remotePeerId) {
     });
 }
 
-function setRemoteStream(event, remotePeerId) {
+function setRemoteStream(event, remotePeerId, displayName) {
     console.log("Remote stream set");
     if (event.track.kind == "video") {
+        const guestVideo = document.createElement("div");
+        guestVideo.id = "guest-video";
+
         const videoREMOTO = document.createElement("video");
         videoREMOTO.srcObject = event.streams[0];
         videoREMOTO.id = "remotevideo_" + remotePeerId;
         videoREMOTO.setAttribute("autoplay", "");
         videoREMOTO.style = "box-shadow: rgb(4 4 4 / 94%) 0px 7px 29px 0px";
-        guestComponent.append(videoREMOTO);
+        guestVideo.append(videoREMOTO);
+
+        const guestName = document.createElement("label");
+        guestName.innerHTML = displayName;
+        guestVideo.append(guestName);
+
+        guestComponent.append(guestVideo);
     }
 }
 
@@ -386,23 +383,24 @@ function toast({ title = "", type = "info", duration = 3000 }) {
     }
 }
 
-function showErrorToast() {
+function showErrorToast(displayName) {
     toast({
-        title: `Ngắt kết nối`,
+        title: `${displayName} đã ngắt kết nối`,
         type: "info",
         duration: 5000,
     });
 }
 
-function checkPeerDisconnect(event, remotePeerId) {
+function checkPeerDisconnect(event, remotePeerId, displayName) {
     var state = peerConnections[remotePeerId].iceConnectionState;
     console.log(`connection with peer ${remotePeerId}: ${state}`);
     if (state === "failed" || state === "closed" || state === "disconnected") {
-        showErrorToast();
+        showErrorToast(displayName);
         console.log(`Peer ${remotePeerId} has disconnected`);
         const videoDisconnected = document.getElementById(
             "remotevideo_" + remotePeerId
         );
+        document.getElementById("guest-video").remove();
         videoDisconnected.remove();
     }
 }

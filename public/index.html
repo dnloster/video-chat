@@ -3,21 +3,30 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>WebRTC</title>
+        <title>Video Call</title>
         <link rel="stylesheet" href="tabler-icons.min.css" />
         <link rel="stylesheet" href="style.css" />
     </head>
 
     <body>
         <div id="room-selection-container" class="centered">
-            <h1>Video chat app</h1>
+            <h1 style="text-align: center; text-transform: uppercase">
+                Video chat
+            </h1>
             <br />
-            <!-- <label>Enter your name:</label>
-            <input type="text" id="userName" /> -->
+            <input type="text" id="userName" placeholder="Enter your name" />
             <br />
-            <label>Enter room number: </label>
-            <input id="room-input" type="number" />
-            <button id="connect-button">CONNECT</button>
+            <br />
+            <input
+                id="room-input"
+                type="number"
+                placeholder="Enter room number"
+            />
+            <div>
+                <button id="connect-button" style="text-align: center">
+                    CONNECT
+                </button>
+            </div>
         </div>
 
         <div id="video-chat-container" class="video-position">
